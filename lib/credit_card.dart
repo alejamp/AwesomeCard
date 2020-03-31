@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CreditCard extends StatefulWidget {
+  final bool mask;
   final String cardNumber;
   final String cardExpiry;
   final String cardHolderName;
@@ -22,6 +23,8 @@ class CreditCard extends StatefulWidget {
   final CardType cardType;
   final double width;
   final double height;
+  final bool compactView;
+  final bool doubleSide;
 
   CreditCard(
       {Key key,
@@ -39,6 +42,9 @@ class CreditCard extends StatefulWidget {
       this.frontTextColor = Colors.white,
       this.backTextColor = Colors.black,
       this.showShadow = false,
+      this.compactView = false,
+      this.mask = false,
+      this.doubleSide = true,
       this.width,
       this.height})
       : assert(frontBackground != null),
@@ -56,6 +62,8 @@ class _CreditCardState extends State<CreditCard>
   AnimationController _controller;
   Animation<double> _moveToBack;
   Animation<double> _moveToFront;
+  RegExp reg_cardnumber_mask = RegExp(r'\d(?!\d{0,4}$)');
+  RegExp reg_cvv_mask = RegExp(r'\d');
 
   @override
   void initState() {
@@ -109,63 +117,77 @@ class _CreditCardState extends State<CreditCard>
       _controller.reverse().orCancel;
     }
 
-    return Center(
-      child: Stack(
-        children: <Widget>[
-          AwesomeCard(
+    var front = AwesomeCard(
             animation: _moveToBack,
             child: _buildFrontCard(),
-          ),
-          AwesomeCard(
+          );
+
+    var back =  AwesomeCard(
             animation: _moveToFront,
             child: _buildBackCard(),
-          ),
-        ],
+          );
+
+    List<Widget> card = [front];
+    if (widget.doubleSide) card.add(back);
+
+
+    return Center(
+      child: Stack(
+        children: card,
       ),
     );
   }
 
   Widget _buildFrontCard() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20),
-      width: cardWidth,
-      height: cardHeight,
-      decoration: BoxDecoration(
-        boxShadow: widget.showShadow
-            ? [
-                BoxShadow(
-                  color: Colors.black,
-                  blurRadius: 12.0,
-                  spreadRadius: 0.2,
-                  offset: Offset(
-                    3.0, // horizontal, move right 10
-                    3.0, // vertical, move down 10
-                  ),
-                )
-              ]
-            : [],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10.0),
-        child: Stack(
-          children: <Widget>[
-            // Background for card
-            widget.frontBackground,
+    return AnimatedContainer(
 
-            // Front Side Layout
-            widget.frontLayout ??
-                CardFrontLayout(
-                        bankName: widget.bankName,
-                        cardNumber: widget.cardNumber,
-                        cardExpiry: widget.cardExpiry,
-                        cardHolderName: widget.cardHolderName,
-                        cardTypeIcon: getCardTypeIcon(cardType: widget.cardType,
-                            cardNumber: widget.cardNumber),
-                        cardHeight: cardHeight,
-                        cardWidth: cardWidth,
-                        textColor: widget.frontTextColor)
-                    .layout1(),
-          ],
+      height: !widget.compactView ? this.cardHeight : 55.0,
+      alignment:Alignment.center,
+      duration: Duration(milliseconds: 500),
+      curve: Curves.fastOutSlowIn,  
+
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 20),
+        width: cardWidth,
+        height: cardHeight,
+        decoration: BoxDecoration(
+          boxShadow: widget.showShadow
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 6.0,
+                    spreadRadius: 0.1,
+                    offset: Offset(
+                      1.5, // horizontal, move right 10
+                      1.5, // vertical, move down 10
+                    ),
+                  )
+                ]
+              : [],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10.0),
+          child: Stack(
+            children: <Widget>[
+              // Background for card
+              widget.frontBackground,
+
+              // Front Side Layout
+              widget.frontLayout ??
+                  CardFrontLayout(
+                          compactView: widget.compactView,
+                          bankName: widget.bankName,
+                          cardNumber: widget.mask ? widget.cardNumber.replaceAll(this.reg_cardnumber_mask, '*') : widget.cardNumber,
+                          cardExpiry: widget.cardExpiry,
+                          cardHolderName: widget.cardHolderName,
+                          cardTypeIcon: getCardTypeIcon(cardType: widget.cardType,
+                              cardNumber: widget.cardNumber),
+                          cardHeight: cardHeight,
+                          cardWidth: cardWidth,
+                          textColor: widget.frontTextColor)
+                      .layout1(),
+            ],
+          ),
         ),
       ),
     );
